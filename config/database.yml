@@ -5,21 +5,26 @@
 #   gem "sqlite3"
 #
 default: &default
-  adapter: sqlite3
+  url: cockroachdb://<user name>@<cluster name>:26257/bugtestonly?sslmode=verify-full&sslrootcert=<local path to sslrootcert>
+  # note the above line should update <dummy> values.
+  # For appfolians, ask grant for the cluster name, and set up your own user name/password if you haven't already (https://coda.io/d/_dnhAJHrhOBE/Run-Book_su3FQ#_luc9i)
+  password: dummy # update me
+  encoding: utf8
+  use_follower_reads_for_type_introspection: true
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   timeout: 5000
 
 development:
   <<: *default
-  database: storage/development.sqlite3
+  database: bugtestonly
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
 # Do not set this db to the same as development or production.
 test:
   <<: *default
-  database: storage/test.sqlite3
+  database: bugtestonly
 
 production:
   <<: *default
-  database: storage/production.sqlite3
+  database: bugtestonly
