@@ -1,35 +1,40 @@
 # README
 
-This repo is used to reproduce an error in activerecord-cockroachdb-adapter. Essentially, with the rails 7.1 upgrade
-of the gem, when the first query run starts a transaction (like `create_or_find_by`), the as of system time type introspection
-queries occur after the transaction starts, and throw a CRDB error `PG::FeatureNotSupported: ERROR:  inconsistent AS OF SYSTEM TIME timestamp`
-
-More [in the github issue](https://github.com/cockroachdb/activerecord-cockroachdb-adapter/issues/320)
+This repo is used to reproduce an error in activerecord-cockroachdb-adapter. 
 
 To reproduce using this repo, update the database.yml with your CRDB cluster info. You will need a console user for your CRDB cluster.
-Then run some setup commands:
+
+Additionally, ensure you cockroachdb cluster is on version 24.2 or later
+
+Then try to migrate:
 
 ```
 bundle install
 bundle exec rails db:create db:migrate
 ```
 
-then the following in the rails console to trigger the error:
+This will generate an error
 
 ```
-Post.create_or_find_by!(other_id: '123')
+StandardError: An error has occurred, all later migrations canceled: (StandardError)
+
+No indexes found on posts with the options provided.
+/Users/grant.paulson/src/bugreproduced/db/migrate/20250418172325_remove_index.rb:3:in `change'
+
+Caused by:
+ArgumentError: No indexes found on posts with the options provided. (ArgumentError)
+
+            raise ArgumentError, "No indexes found on #{table_name} with the options provided."
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/grant.paulson/src/bugreproduced/db/migrate/20250418172325_remove_index.rb:3:in `change'
+
 ```
 
-To get additional logging, you can add this in first:
+The cause is that the crdb_region column is now being returned by the cluster. This can be checked by running
 
+```ruby
+ActiveRecord::Base.connection.indexes(:posts)
 ```
-class ActiveRecord::ConnectionAdapters::PostgreSQLAdapter
-  def log(sql, name = "SQL", binds = [], type_casted_binds = [], statement_name = nil, async: false, &block)
-    puts "------ #{name&.chomp || "anonymous query"} ------\n-- \n#{sql.chomp};\n\n"
-    lines = caller_locations
-    lines.each { |line| puts line }
-    super
-  end
-end
-```
+and observing `crdb_region` is now a column listed, even though it should be hidden
 
+You can point to an older cockroachdb cluster and observe this error does not occur
