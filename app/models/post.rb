@@ -1,4 +1,5 @@
 class Post < ApplicationRecord
+  def self.comment
+    "---\ncomment:\nsensitivity: confidential\nsanitizer: :randomize_digits\nsanitizer_options:\n  :pattern: '12345'\n"
+  end
 end
-
-# run `Post.create_or_find_by!(other_id: '123')` from the rails console, and you'll get an error
